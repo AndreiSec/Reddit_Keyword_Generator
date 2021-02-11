@@ -7,10 +7,13 @@ Email:   andreisecara01@gmail.com
 __updated__ = "2019-04-27"
 -------------------------------------------------------
 """
-from Word_Class import *
-from Popularity_Tree import *
+import collections
+import pandas as pd
+import matplotlib.pyplot as plt 
 import praw
 import re
+from gc import collect
+from matplotlib.axis import XAxis
 
 # API secret and other credentials are stored in text file "credentials.txt" to prevent privacy issues while distrubuting the program
 # To Use this application, generate your own API key using these instructions: https://github.com/reddit-archive/reddit/wiki/OAuth2-Quick-Start-Example#first-steps
@@ -18,17 +21,17 @@ import re
 fp = open("credentials.txt", "r") # File pointer to credentials.txt Used to import credentials
 
 # Order of credentials in file (seperated by newline): client_id, client_secret, user_agent, username, password
-
 credentialList = [None] * 5 # List to temp store credentials loaded from file
 
 
 # Set number of top subreddit posts to analyze. As well, number of comments to analyze per post. Keep in mind that the more subreddits to analyze
 # the longer it will take, and the more memory instensive it will be.
-postLimit = 1
+#THESE VALUE WILL BE SET BY USER ON WEBSITE
+postLimit = 5
 commentsLimit = 10
 
-WORDFILENAME = "words.txt"
-TOPWORDSNUMBER = 10
+#THIS VALUE WILL BE SET BY USER ON WEBSITE
+NUMBEROFWORDSTOPRINT = 10
 
 # Used for iteration and counting
 i = 0
@@ -36,7 +39,9 @@ i = 0
 # DELIMMITERS TO USE WHILE PARSING TEXT
 delims = r"[\w']+"
 
-
+"""
+FOR THE WEBSITE, THE USER CAN DEFINE A LIST OF STOP WORDS!
+"""
 # Load list of common english words into array to use 
 en_words_fp = open("common_english_words.txt", "r")
 l = en_words_fp.readline() # Read first and only line of text document
@@ -67,10 +72,23 @@ reddit = praw.Reddit(
 
 # subredditString = input("Please enter the subreddit you wish to analyze: ")
 # subredditString= subredditString.strip('\n')
-subredditString = "learnpython"
+subredditString = "wallstreetbets"
+poststype = "rising"
+
 subred = reddit.subreddit(subredditString)
 
-top = subred.top(limit = postLimit)
+if poststype == "top":
+    subredditposts = subred.top(limit = postLimit)
+elif poststype == "hot":
+    subredditposts = subred.hot(limit = postLimit)
+elif poststype == "new":
+    subredditposts = subred.new(limit = postLimit)
+elif poststype == "rising":
+    subredditposts = subred.rising(limit = postLimit)
+
+
+
+
 print("\nConnection Successful ... Analyzing subreddit: '{}' \n".format(subredditString))
 
 
@@ -83,7 +101,7 @@ wordscount = {}
 # TOTAL NUMBER OF WORDS ANALYZED
 totalcount = 0
 # Time to iterate through each 
-for post in top:
+for post in subredditposts:
     
     # Reset memory storage every post to save memory
     wordList = []
@@ -97,8 +115,10 @@ for post in top:
     commentWordList = []
     commentString = ""
     
-    
-    print("Analyzing post: " + str(post.title))
+    try:
+        print("Analyzing post: " + str(post.title))
+    except:
+        print("Analyzing post: TITLE UNABLE TO BE READ. Most likely contains emojis.")
     
     # First, read title
     titleString = post.title
@@ -109,7 +129,7 @@ for post in top:
     bodyWordList = re.findall(delims, bodyString)
     
     
-    post.comments.replace_more(limit=None)
+    post.comments.replace_more(limit=commentsLimit)
     for comment in post.comments.list():
         commentString = comment.body
         commentWordList = commentWordList + re.findall(delims, commentString)
@@ -118,32 +138,30 @@ for post in top:
     # Concatenate all words from post into a single list to append to file
     wordList = titleWordList + bodyWordList + commentWordList
     
-    # Write all words to a storage file to save memory (analyzing thousands of posts could
-    # exceed memory capacity of some systems. Also more secure in case of system shutdown.
-#     wordNumber = 1
-#     maxWordsPerLine = 10
-    # Wordnumber is here to keep track of how many words are written per line
+    print("Word List Generated for post generated... Filling dictionary")
     for w in wordList:
-#         if wordNumber == maxWordsPerLine:
-#             storage_file.write("\n") # Create a new line to write another line of words
-#             wordNumber = 1 # Reset word number counter back to one
-        if  w.isalpha() and w not in english_words_list:
-            if w not in wordscount:
-                wordscount[w] = 1
+        if  w.isalpha() and w.lower() not in english_words_list:
+            if w.lower() not in wordscount:
+                wordscount[w.lower()] = 1
             else:
-                wordscount[w] += 1
-#             storage_file.write(w.lower() + " ")
+                wordscount[w.lower()] += 1
             totalcount += 1
-        
-#         wordNumber += 1
-
-    
-# storage_file.close()
 
 
+word_counter = collections.Counter(wordscount)
+
+for word, count in word_counter.most_common(NUMBEROFWORDSTOPRINT):
+    print("%s : %d : %.2f" % (word, count, (count*100/totalcount)), end="")
+    print("%")
 
 
 
+# Create a data frame of the most common words 
+# Draw a bar chart
+lst = word_counter.most_common(NUMBEROFWORDSTOPRINT)
+df = pd.DataFrame(lst, columns = ['Word', 'Count'])
+df.plot(x="Word", y="Count", kind="bar")
+plt.show()
 
 
 print("Total word count: %s" %(totalcount))
