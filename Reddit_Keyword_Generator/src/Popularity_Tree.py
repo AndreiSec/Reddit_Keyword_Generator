@@ -47,17 +47,16 @@ class _PT_Node:
             None
         -------------------------------------------------------
         """
-        if self._left is None:
-            left_height = 0
-        else:
-            left_height = self._left._height
-
-        if self._right is None:
-            right_height = 0
-        else:
-            right_height = self._right._height
-
-        self._height = max(left_height, right_height) + 1
+        leftHeight = 0
+        rightHeight = 0
+        
+        if self._left != None:
+            leftHeight = self._left._height
+        
+        if self._right != None:
+            rightHeight = self._right._height
+        
+        self._height = max(leftHeight, rightHeight) + 1
         return
     
     def __str__(self):
@@ -129,7 +128,7 @@ class Popularity_Tree:
             
             for word in line2:
 #                 print(word)
-                self.insert(word)
+#                 self.insert(word)
                 self.retrieve_r(word, totalcount)
             
         
@@ -330,6 +329,7 @@ class Popularity_Tree:
             value = None
             node = None
         else:
+            node._update_height()
             if key < node._value:
                 node, value = self._retrieve_aux(node._left, key)
                 
@@ -369,8 +369,8 @@ class Popularity_Tree:
         parent._right = tempnode._left
         tempnode._left = parent
         parent._update_height()
-        if parent._right != None:
-            parent._right._update_height()
+        if tempnode != None:
+            tempnode._update_height()
         return tempnode
         
 
@@ -392,8 +392,8 @@ class Popularity_Tree:
         parent._left = tempnode._right
         tempnode._right = parent
         parent._update_height()
-        if parent._left != None:
-            parent._left._update_height()
+        if tempnode != None:
+            tempnode._update_height()
         return tempnode
 
     def inorder(self):
