@@ -32,7 +32,8 @@ class _PT_Node:
         self._left = None
         self._right = None
         self._height = 1
-        self._rcount = 1  # Retrieval count
+        self._rcount = 0  # Retrieval count
+        self._percent = 0 # Percent makeup of all words found in tree
         return
 
     def _update_height(self):
@@ -66,7 +67,7 @@ class _PT_Node:
             Returns node height and value as a string - for debugging.
             -------------------------------------------------------
             """
-            return "h: {}, v: {}".format(self._height, self._value)
+            return "Word: '%s' Count: %d Percent: %2f Height: %d" % (self._value, self._rcount, self._percent, self._height)
 
 class Popularity_Tree:
 
@@ -96,6 +97,69 @@ class Popularity_Tree:
         -------------------------------------------------------
         """
         return self._root is None
+    
+    
+    """
+    This function fills the pop tree with words and retrieves them simultaneously, increasing the R count.
+    Use: pt.pop_tree_file(wordfilename)
+    """
+    def pop_tree_fill(self,wordfilename, totalcount):
+        
+        # Create word file object    
+        w = open(wordfilename, "r")
+        for line in w:
+            # Create templist of words
+            line2 = line.split(" ")
+            # Remove newline character from list
+            line2.pop()
+            
+            for word in line2:
+#                 print(word)
+                self.insert(word)
+#                 self.retrieve_r(word, totalcount)
+        
+        w.close()  
+        
+        w = open(wordfilename, "r")
+        for line in w:
+            # Create templist of words
+            line2 = line.split(" ")
+            # Remove newline character from list
+            line2.pop()
+            
+            for word in line2:
+#                 print(word)
+                self.insert(word)
+                self.retrieve_r(word, totalcount)
+            
+        
+
+        w.close() 
+        
+        return
+    
+    
+    
+    """
+    Prints n top priority words of the pop tree.
+    """
+    def pop_tree_print(self, n):
+        i = 0
+        print("Is valid tree: " + str(self.is_valid()))
+        for word in self.levelorder():
+            
+            # Stop printing when maximum defined words reached
+            if(i == n):
+                break
+            
+            print(word)
+            
+            i += 1
+        
+        
+        return
+        
+        
 
     def __len__(self):
         """
@@ -224,7 +288,7 @@ class Popularity_Tree:
         return value
     
     
-    def retrieve_r(self, key):
+    def retrieve_r(self, key, totalcount):
         """
         -------------------------------------------------------
         Retrieves a copy of a value matching key in pt.
@@ -241,6 +305,7 @@ class Popularity_Tree:
         node, value = self._retrieve_aux(self._root, key)
         if value is not None:
             node._rcount += 1
+            node._percent = (node._rcount / totalcount) * 100
             
         return value
 
@@ -263,6 +328,7 @@ class Popularity_Tree:
         
         if node is None:
             value = None
+            node = None
         else:
             if key < node._value:
                 node, value = self._retrieve_aux(node._left, key)
@@ -270,7 +336,7 @@ class Popularity_Tree:
                 if node._left is not None:
                     if node._rcount < node._left._rcount:
                         node = self._rotate_right(node)
-                node._update_height()
+#                 node._update_height()
                 
                 
             elif key > node._value:
@@ -279,7 +345,7 @@ class Popularity_Tree:
                 if node._right is not None:
                     if node._rcount < node._right._rcount:
                         node = self._rotate_left(node)
-                node._update_height()
+#                 node._update_height()
             else:
                 value = deepcopy(node._value)
         return node, value
@@ -303,6 +369,8 @@ class Popularity_Tree:
         parent._right = tempnode._left
         tempnode._left = parent
         parent._update_height()
+        if parent._right != None:
+            parent._right._update_height()
         return tempnode
         
 
@@ -324,6 +392,8 @@ class Popularity_Tree:
         parent._left = tempnode._right
         tempnode._right = parent
         parent._update_height()
+        if parent._left != None:
+            parent._left._update_height()
         return tempnode
 
     def inorder(self):
@@ -357,7 +427,7 @@ class Popularity_Tree:
         """
         if node is not None:
             self._inorder_aux(node._left, a)
-            a.append(deepcopy(node._value))
+            a.append(deepcopy(node))
             self._inorder_aux(node._right, a)
         return
 
@@ -391,7 +461,7 @@ class Popularity_Tree:
         ---------------------------------------------------------
         """
         if node is not None:
-            a.append(deepcopy(node._value))
+            a.append(deepcopy(node))
             self._preorder_aux(node._left, a)
             self._preorder_aux(node._right, a)
         return
@@ -428,7 +498,7 @@ class Popularity_Tree:
         if node is not None:
             self._postorder_aux(node._left, a)
             self._postorder_aux(node._right, a)
-            a.append(deepcopy(node._value))
+            a.append(deepcopy(node))
         return
 
     def levelorder(self):
@@ -442,43 +512,43 @@ class Popularity_Tree:
             (list of _PT_Node)
         -------------------------------------------------------
         """
-#         nodes = []
-# 
-#         if self._root is not None:
-#             # Put the nodes for one level into a queue.
-#             queue = []
-#             queue.append(self._root)
-# 
-#             while len(queue) > 0:
-#                 # Add a copy of the data to the sublist
-#                 node = queue.pop(0)
-#                 nodes.append(deepcopy(node))
-# 
-#                 if node._left is not None:
-#                     queue.append(node._left)
-#                 if node._right is not None:
-#                     queue.append(node._right)
-#         return nodes
+        nodes = []
+ 
         if self._root is not None:
-            # Put the nodes for one level into a list.
-            this_level = list()
-            this_level.append(self._root)
-
-            while this_level != []:
-                # Create a list for the children of this node.
-                next_level = list()
-
-                for node in this_level:
-                    print(node._value, end=',')
-
-                    if node._left is not None:
-                        next_level.append(node._left)
-                    if node._right is not None:
-                        next_level.append(node._right)
-                print()
-                # Process the next level.
-                this_level = next_level
-        return
+            # Put the nodes for one level into a queue.
+            queue = []
+            queue.append(self._root)
+ 
+            while len(queue) > 0:
+                # Add a copy of the data to the sublist
+                node = queue.pop(0)
+                nodes.append(deepcopy(node))
+ 
+                if node._left is not None:
+                    queue.append(node._left)
+                if node._right is not None:
+                    queue.append(node._right)
+        return nodes
+#         if self._root is not None:
+#             # Put the nodes for one level into a list.
+#             this_level = list()
+#             this_level.append(self._root)
+# 
+#             while this_level != []:
+#                 # Create a list for the children of this node.
+#                 next_level = list()
+# 
+#                 for node in this_level:
+#                     print(node._value, end=',')
+# 
+#                     if node._left is not None:
+#                         next_level.append(node._left)
+#                     if node._right is not None:
+#                         next_level.append(node._right)
+#                 print()
+#                 # Process the next level.
+#                 this_level = next_level
+#         return nodes
     
     
     def _node_height(self, node):

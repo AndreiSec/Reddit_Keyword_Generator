@@ -8,6 +8,7 @@ __updated__ = "2019-04-27"
 -------------------------------------------------------
 """
 from Word_Class import *
+from Popularity_Tree import *
 import praw
 import re
 
@@ -23,8 +24,11 @@ credentialList = [None] * 5 # List to temp store credentials loaded from file
 
 # Set number of top subreddit posts to analyze. As well, number of comments to analyze per post. Keep in mind that the more subreddits to analyze
 # the longer it will take, and the more memory instensive it will be.
-postLimit = 3
+postLimit = 1
 commentsLimit = 10
+
+WORDFILENAME = "words.txt"
+TOPWORDSNUMBER = 10
 
 # Used for iteration and counting
 i = 0
@@ -72,8 +76,10 @@ print("\nConnection Successful ... Analyzing subreddit: '{}' \n".format(subreddi
 
 
 
-storage_file = open("words.txt", "w")
+storage_file = open(WORDFILENAME, "w")
 
+# TOTAL NUMBER OF WORDS ANALYZED
+totalcount = 0
 # Time to iterate through each 
 for post in top:
     
@@ -119,13 +125,26 @@ for post in top:
         if wordNumber == maxWordsPerLine:
             storage_file.write("\n") # Create a new line to write another line of words
             wordNumber = 1 # Reset word number counter back to one
-        if w.lower() not in english_words_list:
+        if  w.isalpha() and w.lower() not in english_words_list:
             storage_file.write(w.lower() + " ")
+            totalcount += 1
         
         wordNumber += 1
 
 print(english_words_list)
     
 storage_file.close()
+
+poptree = Popularity_Tree()
+
+# Fill Pop Tree
+poptree.pop_tree_fill("wordsTest.txt", totalcount)
+
+# Print top n values of pop tree
+poptree.pop_tree_print(TOPWORDSNUMBER)
+
+# Print total word count
+
+print("Total word count: %s" %(totalcount))
 
 
